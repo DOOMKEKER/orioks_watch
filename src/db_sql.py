@@ -36,3 +36,18 @@ def update_user(tel_id, login, password, cursor):
     cursor.commit()
     return 0
 
+def get_user(tel_id, conn):
+    sql_command = f"""SELECT login, password FROM users
+                        WHERE tel_id = '{tel_id}';
+                    """
+    data = pd.read_sql(sql_command, conn)
+    return data
+
+def receive_notifications(tel_id, cursor, yes_no):
+    sql_command = f"""UPDATE users
+                        SET notification = '{yes_no}'
+                        WHERE tel_id = '{tel_id}';
+                    """
+    cursor.execute(sql_command)
+    cursor.commit()
+    return 0

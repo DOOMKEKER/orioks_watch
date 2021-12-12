@@ -20,6 +20,8 @@ from config import token
 
 START, CHOOSED, IDLE, CHOOSE = range(4)
 
+conn, cursor = None
+
 reply_keyboard = [
     ['Add me', 'Change login|password'],
     ['My scores', 'Receive notifications'],
@@ -59,15 +61,22 @@ def idle(update: Update, context: CallbackContext):
     return CHOOSE
 
 def my_score(update: Update, context: CallbackContext):
-    text = ""
     id =  Update.message.from_user.id
-    db_sql.get_scores(id)
-    update.message.reply_text(
-    )
+    data = db_sql.get_scores(id, conn)
+    update.message.reply_text(data.to_markdown())
     return IDLE
 
 def receive_notifications(update: Update, context: CallbackContext):
-    pass
+    reply_keyboard = ['Yes', 'No']
+    update.message.reply_text("Do you want to receive notifications about new scores and notifications from ORIOKS?",
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    return CHOOSED
+
+def receive_notifications_choose(update: Update, context: CallbackContext):
+    choose = update.message.text
+    id = update.from_user.id
+    db_sql.receive_notifications(id, cursor, choose)
+    return IDLE
 
 def insert_update_data(update: Update, context: CallbackContext):
     pass
@@ -78,6 +87,10 @@ def main():
     bot = Bot(token=token,request=request)
     updater = Updater(bot=bot)
     dummy_event = threading.Event()
+
+    global conn
+    global cursor
+    conn, cursor = db_sql.sql_connect()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -95,7 +108,7 @@ def main():
             ],
             CHOOSED: [
                 MessageHandler(Filters.regex('^login:$'), change_login_and_password),
-                MessageHandler(Filters.regex('^(Yes|No)$'), receive_notifications),
+                MessageHandler(Filters.regex('^(Yes|No)$'), receive_notifications_choose),
             ]
         },
         fallbacks=[MessageHandler(Filters.regex('^(Add me)'), idle)],
