@@ -37,22 +37,23 @@ def start(update: Update, context: CallbackContext):
     )
     return CHOOSE
 
-def add_login_and_password(update: Update, context: CallbackContext):
+def add_change_login_and_password(update: Update, context: CallbackContext):
+    choose = "add" if update.message.text == "Add me" else "change"
+    context.user_data['choice'] = choose
     update.message.reply_text(
-        "To add your login and password send message like this:"
+        f"To {choose} your login and password send message like this:"
         "login:<your_login>"
         "password:<your_password>"
     )
     return CHOOSED
 
-def change_login_and_password(update: Update, context: CallbackContext):
-    update.message.reply_text(
-        "To change your login and password send message like this:"
-        "login:<your_login>"
-        "password:<your_password>"
-    )
-    print(update.message.text)
-    return CHOOSED
+def add_change_login_and_password_choosed(update: Update, context: CallbackContext):
+    id =  Update.message.from_user.id
+    choose = context.user_data['choice']
+    login, password = db_sql.get_user(id)
+    db_sql.update_insert_user(id, login, password, cursor, choose)
+    update.message.reply_text(f"Successfully {choose}ed")
+    return IDLE
 
 def idle(update: Update, context: CallbackContext):
     reply_keyboard = [['My scores', 'Receive notifications'], ["Change login|password"]]
@@ -60,8 +61,8 @@ def idle(update: Update, context: CallbackContext):
         reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
     return CHOOSE
 
-def my_score(update: Update, context: CallbackContext):
-    id =  Update.message.from_user.id
+def my_scores(update: Update, context: CallbackContext):
+    id = Update.message.from_user.id
     data = db_sql.get_scores(id, conn)
     update.message.reply_text(data.to_markdown())
     return IDLE
@@ -96,10 +97,9 @@ def main():
         entry_points=[CommandHandler('start', start)],
         states={
             CHOOSE: [
-                MessageHandler(Filters.regex('^Add me$'), add_login_and_password),
-                MessageHandler(Filters.regex('^Change login|password$'), change_login_and_password),
-                MessageHandler(Filters.regex('^Receive notifications$'), change_login_and_password),
-                MessageHandler(Filters.regex('^My scores$'), change_login_and_password)
+                MessageHandler(Filters.regex('^(Add me|Change login\|password)$'), add_change_login_and_password),
+                MessageHandler(Filters.regex('^Receive notifications$'), receive_notifications),
+                MessageHandler(Filters.regex('^My scores$'), my_scores)
             ],
             IDLE: [
                 MessageHandler(
@@ -107,7 +107,7 @@ def main():
                 )
             ],
             CHOOSED: [
-                MessageHandler(Filters.regex('^login:$'), change_login_and_password),
+                MessageHandler(Filters.regex('^login:$'), add_change_login_and_password_choosed),
                 MessageHandler(Filters.regex('^(Yes|No)$'), receive_notifications_choose),
             ]
         },

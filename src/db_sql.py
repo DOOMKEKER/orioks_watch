@@ -19,20 +19,17 @@ def get_scores(tel_id, conn):
     data = pd.read_sql(sql_command, conn)
     return data
 
-def insert_user(tel_id, login, password, cursor):
-    sql_command = f"""INSERT INTO users (tel_id, login, password)
-                        VALUES ({tel_id}, {login}, {password});"
-                   """
+def update_insert_user(tel_id, login, password, cursor, choose):
+    if choose == "add":
+        sql_command = f"""UPDATE users
+                            SET login = '{login}', password = '{password}'
+                            WHERE tel_id = '{tel_id}';
+                        """
+    elif choose == "change":
+        sql_command = f"""INSERT INTO users (tel_id, login, password)
+                            VALUES ({tel_id}, {login}, {password});"
+                        """
     cursor.execute(sql_command)
-    cursor.commit()
-    return 0
-
-def update_user(tel_id, login, password, cursor):
-    sql_command = f"""UPDATE users
-                        SET login = '{login}', password = '{password}'
-                        WHERE tel_id = '{tel_id}';
-                    """
-    cursor.execute(sql_command) #TODO try: expect?
     cursor.commit()
     return 0
 
@@ -41,7 +38,7 @@ def get_user(tel_id, conn):
                         WHERE tel_id = '{tel_id}';
                     """
     data = pd.read_sql(sql_command, conn)
-    return data
+    return data["login"][0], data["password"][0]
 
 def receive_notifications(tel_id, cursor, yes_no):
     sql_command = f"""UPDATE users
