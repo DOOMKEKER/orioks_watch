@@ -45,7 +45,7 @@ def get_user(tel_id, conn):
 
 def receive_notifications(tel_id, cursor, yes_no):
     sql_command = f"""UPDATE users
-                        SET notification = '{yes_no}'
+                        SET notifications = '{yes_no}'
                         WHERE tel_id = '{tel_id}';
                     """
     cursor.execute(sql_command)

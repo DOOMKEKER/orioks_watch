@@ -64,5 +64,3 @@ def check_notifications(login, password):
             lists.append(strs.replace("\\",""))
 
         return lists
-
-print(check_notifications("8183866","delorian22"))
