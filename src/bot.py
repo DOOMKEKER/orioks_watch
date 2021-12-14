@@ -5,7 +5,7 @@ from telegram.ext.commandhandler import CommandHandler
 from telegram.ext.messagehandler import MessageHandler
 from telegram.ext.filters import Filters
 from telegram import Bot, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import ConversationHandler
+from telegram.ext import ConversationHandler, conversationhandler
 from telegram.utils.request import Request
 
 import threading
@@ -14,13 +14,14 @@ from bs4 import BeautifulSoup as bs
 import json
 
 import db_sql
+import connect
 
 #create token.py and input there token = "<your TOKEN>"
 from config import token
 
 START, CHOOSED, IDLE, CHOOSE = range(4)
 
-conn, cursor = None
+conn, cursor = None, None
 
 reply_keyboard = [
     ['Add me', 'Change login|password'],
@@ -63,9 +64,11 @@ def idle(update: Update, context: CallbackContext):
 
 def my_scores(update: Update, context: CallbackContext):
     id = Update.message.from_user.id
-    data = db_sql.get_scores(id, conn)
-    update.message.reply_text(data.to_markdown())
-    return IDLE
+    data = db_sql.get_scores(id, conn)#TODO not relevant data
+    reply_keyboard = [["Menu"]]
+    update.message.reply_text(data.to_markdown(),#TODO how it looks
+            reply_keyboard=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+    return ConversationHandler.END
 
 def receive_notifications(update: Update, context: CallbackContext):
     reply_keyboard = ['Yes', 'No']
@@ -79,9 +82,6 @@ def receive_notifications_choose(update: Update, context: CallbackContext):
     db_sql.receive_notifications(id, cursor, choose)
     return IDLE
 
-def insert_update_data(update: Update, context: CallbackContext):
-    pass
-
 def main():
 
     request = Request(con_pool_size=8)
@@ -94,7 +94,7 @@ def main():
     conn, cursor = db_sql.sql_connect()
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+        entry_points=[CommandHandler('start', start), MessageHandler(Filters.regex("^Menu"),idle)],
         states={
             CHOOSE: [
                 MessageHandler(Filters.regex('^(Add me|Change login\|password)$'), add_change_login_and_password),
@@ -107,11 +107,11 @@ def main():
                 )
             ],
             CHOOSED: [
-                MessageHandler(Filters.regex('^login:$'), add_change_login_and_password_choosed),
+                MessageHandler(Filters.regex('(login:[0-9]\{7\}|password:.\{5,\})'), add_change_login_and_password_choosed),
                 MessageHandler(Filters.regex('^(Yes|No)$'), receive_notifications_choose),
             ]
         },
-        fallbacks=[MessageHandler(Filters.regex('^(Add me)'), idle)],
+        fallbacks=[MessageHandler(Filters.regex('^(To menu)'), idle)],
     )
 
     updater.dispatcher.add_handler(conv_handler)

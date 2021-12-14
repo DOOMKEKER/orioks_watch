@@ -11,13 +11,12 @@ def sql_connect():
     return conn, cursor
 
 def get_scores(tel_id, conn):
-    sql_command = f"""SELECT users.tel_id, cm_s.subject, SUM(cm_s.ball) FROM users
-                        JOIN cm_s on users.tel_id = cm_s.tel_id
-                        GROUP BY users.tel_id, cm_s.subject
-                        HAVING users.tel_id = '{tel_id}';
+    sql_command = f"""SELECT users.tel_id, cm_s.subject, cm_s.cm, cm_s.ball FROM users
+                        JOIN cm_s ON users.tel_id = cm_s.tel_id
+                        WHERE users.tel_id = '{tel_id}';
                     """
     data = pd.read_sql(sql_command, conn)
-    return data
+    return data.iloc[:,1:4]
 
 def update_insert_user(tel_id, login, password, cursor, choose):
     if choose == "add":
@@ -48,3 +47,6 @@ def receive_notifications(tel_id, cursor, yes_no):
     cursor.execute(sql_command)
     cursor.commit()
     return 0
+
+def insert_update_data(tel_id, data, conn):
+    pass
