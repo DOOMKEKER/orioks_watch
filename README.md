@@ -11,7 +11,7 @@ it is bot for telegram, that useful for monitoring orioks.
    1. [x] receive and insert
    2. [x] regex
    3. [ ] how it looks
-   4. [ ] fix conversation
+   4. [x] fix conversation
 3. [x] add connect.py
    1. [x] findall?
 4. [x] add db_sql.py

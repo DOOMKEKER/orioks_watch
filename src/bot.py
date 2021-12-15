@@ -29,6 +29,9 @@ reply_keyboard = [
 ]
 markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
 
+menu_keyboard = [["Menu"]]
+menu_markup = ReplyKeyboardMarkup(menu_keyboard, one_time_keyboard=True)
+
 def start(update: Update, context: CallbackContext):
 
     update.message.reply_text(
@@ -53,34 +56,40 @@ def add_change_login_and_password_choosed(update: Update, context: CallbackConte
     choose = context.user_data['choice']
     login, password = db_sql.get_user(id)
     db_sql.update_insert_user(id, login, password, cursor, choose)
-    update.message.reply_text(f"Successfully {choose}ed")
-    return IDLE
+    update.message.reply_text(f"Successfully {choose}ed", reply_keyboard=menu_markup)
+    context.user_data.clear()
+    return ConversationHandler.END
 
 def idle(update: Update, context: CallbackContext):
-    reply_keyboard = [['My scores', 'Receive notifications'], ["Change login|password"]]
+    reply = [['My scores', 'Receive notifications'], ["Change login|password"]]
     update.message.reply_text(
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+        reply_markup=ReplyKeyboardMarkup(reply, one_time_keyboard=True))
     return CHOOSE
 
 def my_scores(update: Update, context: CallbackContext):
     id = Update.message.from_user.id
     data = db_sql.get_scores(id, conn)#TODO not relevant data
-    reply_keyboard = [["Menu"]]
     update.message.reply_text(data.to_markdown(),#TODO how it looks
-            reply_keyboard=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+            reply_keyboard=menu_keyboard)
     return ConversationHandler.END
 
 def receive_notifications(update: Update, context: CallbackContext):
-    reply_keyboard = ['Yes', 'No']
+    reply = ['Yes', 'No']
     update.message.reply_text("Do you want to receive notifications about new scores and notifications from ORIOKS?",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+        reply_markup=ReplyKeyboardMarkup(reply, one_time_keyboard=True))
     return CHOOSED
 
 def receive_notifications_choose(update: Update, context: CallbackContext):
     choose = update.message.text
     id = update.from_user.id
     db_sql.receive_notifications(id, cursor, choose)
-    return IDLE
+    if choose == "Yes":
+        text = "Notifications enabled"
+    else: 
+        text = "Notifications disabled"
+    update.message.reply_text(text, reply_keyboard=menu_keyboard)
+    context.user_data.clear()
+    return ConversationHandler.END
 
 def main():
 
@@ -100,11 +109,6 @@ def main():
                 MessageHandler(Filters.regex('^(Add me|Change login\|password)$'), add_change_login_and_password),
                 MessageHandler(Filters.regex('^Receive notifications$'), receive_notifications),
                 MessageHandler(Filters.regex('^My scores$'), my_scores)
-            ],
-            IDLE: [
-                MessageHandler(
-                    Filters.text & ~(Filters.command | Filters.regex('^Add me$')), idle
-                )
             ],
             CHOOSED: [
                 MessageHandler(Filters.regex('(login:[0-9]\{7\}|password:.\{5,\})'), add_change_login_and_password_choosed),
