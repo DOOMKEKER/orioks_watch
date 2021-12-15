@@ -45,14 +45,14 @@ def add_change_login_and_password(update: Update, context: CallbackContext):
     choose = "add" if update.message.text == "Add me" else "change"
     context.user_data['choice'] = choose
     update.message.reply_text(
-        f"To {choose} your login and password send message like this:"
-        "login:<your_login>"
-        "password:<your_password>"
+        f"To {choose} your login and password send message like this:\n"
+        "login:<your_login>\n"
+        "password:<your_password>\n"
     )
     return CHOOSED
 
 def add_change_login_and_password_choosed(update: Update, context: CallbackContext):
-    id =  Update.message.from_user.id
+    id =  update.message.from_user.id
     choose = context.user_data['choice']
     login, password = db_sql.get_user(id)
     db_sql.update_insert_user(id, login, password, cursor, choose)
@@ -62,26 +62,26 @@ def add_change_login_and_password_choosed(update: Update, context: CallbackConte
 
 def idle(update: Update, context: CallbackContext):
     reply = [['My scores', 'Receive notifications'], ["Change login|password"]]
-    update.message.reply_text(
+    update.message.reply_text("What you want?",
         reply_markup=ReplyKeyboardMarkup(reply, one_time_keyboard=True))
     return CHOOSE
 
 def my_scores(update: Update, context: CallbackContext):
-    id = Update.message.from_user.id
+    id = update.message.from_user.id
     data = db_sql.get_scores(id, conn)#TODO not relevant data
-    update.message.reply_text(data.to_markdown(),#TODO how it looks
-            reply_keyboard=menu_keyboard)
+    update.message.reply_text(data.to_markdown(),
+            reply_markup=menu_markup)
     return ConversationHandler.END
 
 def receive_notifications(update: Update, context: CallbackContext):
-    reply = ['Yes', 'No']
+    reply = [['Yes'], ['No']]
     update.message.reply_text("Do you want to receive notifications about new scores and notifications from ORIOKS?",
         reply_markup=ReplyKeyboardMarkup(reply, one_time_keyboard=True))
     return CHOOSED
 
 def receive_notifications_choose(update: Update, context: CallbackContext):
     choose = update.message.text
-    id = update.from_user.id
+    id = update.message.from_user.id
     db_sql.receive_notifications(id, cursor, choose)
     if choose == "Yes":
         text = "Notifications enabled"
