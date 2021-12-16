@@ -7,12 +7,19 @@ def new_scores(tel_id, conn):
     db_scores = db_sql.get_scores(tel_id, conn)
     orioks_scores = connect.request_scores(login, password)
 
-    new_scores = {}
-    for st in orioks_scores:
-        for sh in orioks_scores[st]:
+    insert_scores = {}
+    update_scores = {}
+    for subject in orioks_scores:
+        for sh in orioks_scores[subject]:
             #check if there is data from the site in the database
-            if not db_scores.isin([st,sh,orioks_scores[st][sh]]).all(axis=1).any():
-                if not st in new_scores:
-                    new_scores[st] = {}
-                new_scores[st][sh] = orioks_scores[st][sh]
-    return new_scores
+            #it's a bit confusing, but in short I divide scores those that new and those that have been updated
+            if not db_scores.isin([subject,sh,orioks_scores[subject][sh]]).all(axis=1).any():
+                if not db_scores.loc[:,["subject","cm"]].isin([subject,sh]).all(axis=1).any():
+                    if not subject in insert_scores:
+                        insert_scores[subject] = {}
+                    insert_scores[subject][sh] = orioks_scores[subject][sh]
+                    continue
+                if not subject in update_scores:
+                    update_scores[subject] = {}
+                update_scores[subject][sh] = orioks_scores[subject][sh]
+    return insert_scores, update_scores

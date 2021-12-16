@@ -1,3 +1,4 @@
+from re import sub
 from typing import Text
 from telegram.ext.updater import Updater
 from telegram.update import Update
@@ -57,7 +58,7 @@ def add_change_login_and_password_choosed(update: Update, context: CallbackConte
     id =  update.message.from_user.id
     choose = context.user_data['choice']
     login, password = db_sql.get_user(id)
-    db_sql.update_insert_user(id, login, password, cursor, choose)#TODO it's will not work...
+    db_sql.update_insert_user(id, login, password, cursor, choose, conn)#TODO it's will not work...
     update.message.reply_text(f"Successfully {choose}ed", reply_keyboard=menu_markup)
     context.user_data.clear()
     return ConversationHandler.END
@@ -70,8 +71,15 @@ def idle(update: Update, context: CallbackContext):
 
 def my_scores(update: Update, context: CallbackContext):
     id = update.message.from_user.id
-    data = db_sql.get_scores(id, conn)#TODO not relevant data
-    update.message.reply_text(data.to_markdown(),
+    login,password = db_sql.get_user(id, conn)
+    scores = connect.request_scores(login,password)
+    text = ""
+    for subject in scores:
+        sum = 0
+        for cm in scores[subject]:
+            sum += scores[subject][cm]
+        text = subject + " : " + str(sum)
+    update.message.reply_text(text,
             reply_markup=menu_markup)
     return ConversationHandler.END
 
@@ -84,7 +92,7 @@ def receive_notifications(update: Update, context: CallbackContext):
 def receive_notifications_choose(update: Update, context: CallbackContext):
     choose = update.message.text
     id = update.message.from_user.id
-    db_sql.receive_notifications(id, cursor, choose)
+    db_sql.receive_notifications(id, cursor, choose, conn)
     if choose == "Yes":
         text = "Notifications enabled"
     else: 
@@ -125,13 +133,21 @@ def main():
     # updater.idle()
 
     while(True):
-        dummy_event.wait(timeout=60*60*2) # 2 hours #TODO do not send messages in night
+        dummy_event.wait(timeout=2) # wait 2 hours #TODO do not send messages in night
 
         users = db_sql.get_all_users(conn)
         for user in users.tel_id:
             print(user)
-            scores = funcs.new_scores(user, conn)
-            if scores != {}:
+            iscores,uscores = funcs.new_scores(user, conn)
+            scores = {}
+            for x in (iscores,uscores):
+                scores.update(x)
+            if scores != {}:#dammm...
+                if iscores != {}:
+                    db_sql.insert_data(user, iscores, cursor, conn)
+                elif uscores != {}:
+                    print(uscores)
+                    db_sql.update_data(user, uscores, cursor, conn)
                 bot.send_message(user, "You have some new e-balls!")
                 for sub in scores:
                     text = ""

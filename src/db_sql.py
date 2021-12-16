@@ -18,7 +18,7 @@ def get_scores(tel_id, conn):
     data = pd.read_sql(sql_command, conn)
     return data.iloc[:,1:4]
 
-def update_insert_user(tel_id, login, password, cursor, choose):
+def update_insert_user(tel_id, login, password, cursor, choose, conn):
     if choose == "add":
         sql_command = f"""UPDATE users
                             SET login = '{login}', password = '{password}'
@@ -29,7 +29,7 @@ def update_insert_user(tel_id, login, password, cursor, choose):
                             VALUES ({tel_id}, {login}, {password});"
                         """
     cursor.execute(sql_command)
-    cursor.commit()
+    conn.commit()
     return 0
 
 def get_user(tel_id, conn):
@@ -44,14 +44,39 @@ def get_all_users(conn):
     data = pd.read_sql(sql_command, conn)
     return data
 
-def receive_notifications(tel_id, cursor, yes_no):
+def receive_notifications(tel_id, cursor, yes_no, conn):
     sql_command = f"""UPDATE users
                         SET notifications = '{yes_no}'
                         WHERE tel_id = '{tel_id}';
                     """
     cursor.execute(sql_command)
-    cursor.commit()
+    conn.commit()
     return 0
 
-def insert_update_data(tel_id, data, conn):
-    pass
+def insert_data(tel_id, data, cursor, conn):
+    sql_command = ""
+    for subject in data:
+        for cm in data[subject]:
+            ball = data[subject][cm]
+            sql_command += f"""INSERT INTO cm_s (tel_id, subject, cm, ball)
+                            VALUES ('{tel_id}', '{subject}', '{cm}', '{ball}');\n
+                            """
+    cursor.execute(sql_command)
+    conn.commit()
+    return 0
+
+def update_data(tel_id, data, cursor, conn):
+    sql_command = ""
+    for subject in data:
+        print(subject)
+        for cm in data[subject]:
+            ball = data[subject][cm]
+            sql_command += f"""UPDATE cm_s 
+                                SET ball = '{ball}'
+                                WHERE tel_id = '{tel_id}' AND
+                                    subject = '{subject}' AND
+                                    cm ='{cm}';\n
+                            """
+    cursor.execute(sql_command)
+    conn.commit()
+    return 0
