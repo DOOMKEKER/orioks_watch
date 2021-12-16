@@ -3,7 +3,7 @@ import connect
 from pandas import DataFrame
 
 def new_scores(tel_id, conn):
-    login, password = db_sql.get_user(tel_id)
+    login, password = db_sql.get_user(tel_id, conn)
     db_scores = db_sql.get_scores(tel_id, conn)
     orioks_scores = connect.request_scores(login, password)
 

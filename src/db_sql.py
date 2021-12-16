@@ -39,6 +39,11 @@ def get_user(tel_id, conn):
     data = pd.read_sql(sql_command, conn)
     return data["login"][0], data["password"][0]
 
+def get_all_users(conn):
+    sql_command = "SELECT tel_id FROM users;"
+    data = pd.read_sql(sql_command, conn)
+    return data
+
 def receive_notifications(tel_id, cursor, yes_no):
     sql_command = f"""UPDATE users
                         SET notifications = '{yes_no}'

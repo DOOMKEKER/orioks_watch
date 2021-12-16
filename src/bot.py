@@ -1,3 +1,4 @@
+from typing import Text
 from telegram.ext.updater import Updater
 from telegram.update import Update
 from telegram.ext.callbackcontext import CallbackContext
@@ -15,6 +16,7 @@ import json
 
 import db_sql
 import connect
+import helper_funcs as funcs
 
 #create token.py and input there token = "<your TOKEN>"
 from config import token
@@ -55,7 +57,7 @@ def add_change_login_and_password_choosed(update: Update, context: CallbackConte
     id =  update.message.from_user.id
     choose = context.user_data['choice']
     login, password = db_sql.get_user(id)
-    db_sql.update_insert_user(id, login, password, cursor, choose)
+    db_sql.update_insert_user(id, login, password, cursor, choose)#TODO it's will not work...
     update.message.reply_text(f"Successfully {choose}ed", reply_keyboard=menu_markup)
     context.user_data.clear()
     return ConversationHandler.END
@@ -112,7 +114,7 @@ def main():
             ],
             CHOOSED: [
                 MessageHandler(Filters.regex('(login:[0-9]\{7\}|password:.\{5,\})'), add_change_login_and_password_choosed),
-                MessageHandler(Filters.regex('^(Yes|No)$'), receive_notifications_choose),
+                MessageHandler(Filters.regex('^(Yes|No)$'), receive_notifications_choose)
             ]
         },
         fallbacks=[MessageHandler(Filters.regex('^(To menu)'), idle)],
@@ -120,12 +122,33 @@ def main():
 
     updater.dispatcher.add_handler(conv_handler)
     updater.start_polling()
-    updater.idle()
+    # updater.idle()
 
     while(True):
-        dummy_event.wait(timeout=60*60*2)
+        dummy_event.wait(timeout=60*60*2) # 2 hours #TODO do not send messages in night
 
-    return 0
+        users = db_sql.get_all_users(conn)
+        for user in users.tel_id:
+            print(user)
+            scores = funcs.new_scores(user, conn)
+            if scores != {}:
+                bot.send_message(user, "You have some new e-balls!")
+                for sub in scores:
+                    text = ""
+                    text += sub + "\n"
+                    for cm in scores[sub]:
+                        new_cm = cm if cm != "-" else "Экзамем"
+                        text += new_cm + " : " + str(scores[sub][cm]) + "\n"
+                    bot.send_message(user, text)
+
+            login, password = db_sql.get_user(user, conn)
+            try:
+                notis = connect.check_notifications(login, password)
+            except:
+                continue
+            if notis != []:
+                    bot.send_message(user, "You have new notifications in ORIOKS!")
+                    bot.send_message(user, notis)
 
 if __name__ == '__main__':
     main()
