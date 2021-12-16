@@ -1,4 +1,4 @@
-token = "5003282484:AAH566Y0vD5kaLtOwv-nzlCMNAuqbpYKoRU"
+token = ""
 PGHOST="localhost"
 PGDATABASE="test"
 PGUSER="postgres"
