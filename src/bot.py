@@ -61,6 +61,7 @@ def add_change_log_pass_choosed(update: Update, context: CallbackContext):
     choose = context.user_data['choice']
     password =  update.message.text
     login = context.user_data["login"]
+    print(login, password)
     if connect.check_login(login, password):
         db_sql.update_insert_user(id, login, password, cursor, choose, conn)
         update.message.reply_text(f"Successfully {choose}ed", reply_markup=menu_markup)
@@ -82,18 +83,25 @@ def my_scores(update: Update, context: CallbackContext):
         update.message.reply_text("You not in base, change or add login, password",
             reply_markup=menu_markup)
         return ConversationHandler.END
+
     scores = connect.request_scores(login,password)
     text = ""
     for subject in scores:
         sum = 0
         for cm in scores[subject]:
-            sum += scores[subject][cm]
-        text = subject + " : " + str(sum)
+            sum += scores[subject][cm] if scores[subject][cm] != -1 else 0
+        text += subject + " : " + str(sum) + "\n"
     update.message.reply_text(text,
             reply_markup=menu_markup)
     return ConversationHandler.END
 
 def receive_notifications(update: Update, context: CallbackContext):
+    login,password = db_sql.get_user(id, conn)
+    if not login or not password:
+        update.message.reply_text("You not in base, change or add login, password",
+            reply_markup=menu_markup)
+        return ConversationHandler.END
+
     reply = [['Yes'], ['No']]
     update.message.reply_text("Do you want to receive notifications about new scores and notifications from ORIOKS?",
         reply_markup=ReplyKeyboardMarkup(reply, one_time_keyboard=True))
@@ -123,7 +131,7 @@ def main():
     conn, cursor = db_sql.sql_connect()
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
+        entry_points=[CommandHandler('start', start), MessageHandler(Filters.regex('^(Menu)'), idle)],
         states={
             CHOOSE: [
                 MessageHandler(Filters.regex('^(Add me|Change login\|password)$'), add_change_login_and_password),

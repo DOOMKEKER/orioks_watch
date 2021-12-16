@@ -20,14 +20,16 @@ def get_scores(tel_id, conn):
 
 def update_insert_user(tel_id, login, password, cursor, choose, conn):
     if choose == "add":
+        sql_command = f"""INSERT INTO users (tel_id, login, password)
+                            VALUES ('{tel_id}', '{login}', '{password}');
+                        """
+    elif choose == "change":
         sql_command = f"""UPDATE users
                             SET login = '{login}', password = '{password}'
                             WHERE tel_id = '{tel_id}';
                         """
-    elif choose == "change":
-        sql_command = f"""INSERT INTO users (tel_id, login, password)
-                            VALUES ({tel_id}, {login}, {password});"
-                        """
+    print(sql_command)
+    print(choose)
     cursor.execute(sql_command)
     conn.commit()
     return 0
