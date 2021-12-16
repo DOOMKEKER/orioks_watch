@@ -48,18 +48,24 @@ def add_change_login_and_password(update: Update, context: CallbackContext):
     choose = "add" if update.message.text == "Add me" else "change"
     context.user_data['choice'] = choose
     update.message.reply_text(
-        f"To {choose} your login and password send message like this:\n"
-        "login:<your_login>\n"
-        "password:<your_password>\n"
+        f"To {choose} your login and password please enter login:"
     )
     return CHOOSED
 
-def add_change_login_and_password_choosed(update: Update, context: CallbackContext):
+def add_change_log_pass_choosed(update: Update, context: CallbackContext):
+    if "login" not in context.user_data:
+        context.user_data["login"] = update.message.text
+        update.message.reply_text("Now enter password:", reply_markup=menu_markup)
+        return CHOOSED
     id =  update.message.from_user.id
     choose = context.user_data['choice']
-    login, password = db_sql.get_user(id)
-    db_sql.update_insert_user(id, login, password, cursor, choose, conn)#TODO it's will not work...
-    update.message.reply_text(f"Successfully {choose}ed", reply_keyboard=menu_markup)
+    password =  update.message.text
+    login = context.user_data["login"]
+    if connect.check_login(login, password):
+        db_sql.update_insert_user(id, login, password, cursor, choose, conn)
+        update.message.reply_text(f"Successfully {choose}ed", reply_markup=menu_markup)
+    else:
+        update.message.reply_text("invalid login or password", reply_markup=menu_markup)
     context.user_data.clear()
     return ConversationHandler.END
 
@@ -72,6 +78,10 @@ def idle(update: Update, context: CallbackContext):
 def my_scores(update: Update, context: CallbackContext):
     id = update.message.from_user.id
     login,password = db_sql.get_user(id, conn)
+    if not login or not password:
+        update.message.reply_text("You not in base, change or add login, password",
+            reply_markup=menu_markup)
+        return ConversationHandler.END
     scores = connect.request_scores(login,password)
     text = ""
     for subject in scores:
@@ -113,7 +123,7 @@ def main():
     conn, cursor = db_sql.sql_connect()
 
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start), MessageHandler(Filters.regex("^Menu"),idle)],
+        entry_points=[CommandHandler('start', start)],
         states={
             CHOOSE: [
                 MessageHandler(Filters.regex('^(Add me|Change login\|password)$'), add_change_login_and_password),
@@ -121,11 +131,12 @@ def main():
                 MessageHandler(Filters.regex('^My scores$'), my_scores)
             ],
             CHOOSED: [
-                MessageHandler(Filters.regex('(login:[0-9]\{7\}|password:.\{5,\})'), add_change_login_and_password_choosed),
+                # MessageHandler(Filters.regex('[0-9].{6,8}'), add_change_log_pass_choosed),
+                MessageHandler(Filters.regex('.{3,50}'), add_change_log_pass_choosed),
                 MessageHandler(Filters.regex('^(Yes|No)$'), receive_notifications_choose)
             ]
         },
-        fallbacks=[MessageHandler(Filters.regex('^(To menu)'), idle)],
+        fallbacks=[MessageHandler(Filters.regex('^(Menu)'), idle)],
     )
 
     updater.dispatcher.add_handler(conv_handler)
@@ -133,7 +144,7 @@ def main():
     # updater.idle()
 
     while(True):
-        dummy_event.wait(timeout=2) # wait 2 hours #TODO do not send messages in night
+        dummy_event.wait(timeout=60*60*2) # wait 2 hours #TODO do not send messages in night
 
         users = db_sql.get_all_users(conn)
         for user in users.tel_id:
